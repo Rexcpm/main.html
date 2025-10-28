@@ -5,17 +5,39 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
 <title>SUPREMEMODZVIP WEB TOOL</title>
 <style>
-body{margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;background:url("https://i.postimg.cc/ZqdtsJ6t/IMG-0640.jpg") center/cover fixed;color:#fff}
-.center-wrapper{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:90%;max-width:350px}
-.container{background:rgba(0,0,0,.6);backdrop-filter:blur(12px);padding:20px;border-radius:10px;box-shadow:0 0 25px #000;border:2px solid #00aaff;text-align:center}
-h1{font-size:20px;margin-bottom:12px}
-input,select{width:90%;padding:10px;margin:8px 0;border-radius:5px;border:0;background:rgba(255,255,255,.1);color:#fff;font-size:16px}
-button{width:95%;padding:10px;margin:6px 0;border-radius:5px;border:0;cursor:pointer;font-weight:700;font-size:16px}
-button.login{background:#00aaff;color:#fff}
-button.menu{background:#ff8800;color:#fff}
-.status{margin-top:10px;color:#0f0;min-height:20px}
-.error{color:#f55}
-.price{font-size:13px;opacity:.8;margin-bottom:6px;color:#0ff;}
+body {
+  margin: 0; padding: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  background: url("https://i.postimg.cc/ZqdtsJ6t/IMG-0640.jpg") center/cover fixed;
+  color: #fff;
+}
+.center-wrapper {
+  position: fixed; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 90%; max-width: 350px;
+}
+.container {
+  background: rgba(0,0,0,0.6); backdrop-filter: blur(12px);
+  padding: 20px; border-radius: 10px;
+  box-shadow: 0 0 25px #000; border: 2px solid #00aaff;
+  text-align: center;
+}
+h1 { font-size: 20px; margin-bottom: 12px; }
+input, select {
+  width: 90%; padding: 10px; margin: 8px 0;
+  border-radius: 5px; border: 0;
+  background: rgba(255,255,255,0.1); color: #fff; font-size: 16px;
+}
+button {
+  width: 95%; padding: 10px; margin: 6px 0;
+  border-radius: 5px; border: 0; cursor: pointer;
+  font-weight: 700; font-size: 16px;
+}
+button.login { background: #00aaff; color: #fff; }
+button.menu { background: #ff8800; color: #fff; }
+.status { margin-top: 10px; color: #0f0; min-height: 20px; }
+.error { color: #f55; }
+.price { font-size: 13px; opacity: .8; margin-bottom: 6px; color: #0ff; }
 </style>
 </head>
 <body>
@@ -37,20 +59,21 @@ button.menu{background:#ff8800;color:#fff}
   <div id="menuButtons" class="container" style="display:none;">
     <h1>🎮 GAME SERVICES</h1>
     <p class="price">Each service costs ₱500</p>
-    <button onclick="kingRank()" class="menu">👑 King Rank</button>
-    <button onclick="changeEmail()" class="menu">📧 Change Email</button>
-    <button onclick="changePassword()" class="menu">🔐 Change Password</button>
+    <button onclick="handleService('kingRank')" class="menu">👑 King Rank</button>
+    <button onclick="handleService('changeEmail')" class="menu">📧 Change Email</button>
+    <button onclick="handleService('changePassword')" class="menu">🔐 Change Password</button>
     <div id="serviceStatus" class="status"></div>
   </div>
 </div>
 
 <script>
+/* ========= CONFIG ========= */
 const BIN_ID = "68fffdb0ae596e708f317d6e"; 
 const MASTER_KEY = "$2a$10$qGhpOw4TrhqQqdaOEVsfx.//xeP1yrNELVuUVnGLVinijLbAdNO62";
 const BASE_URL = `https://api.jsonbin.io/v3/b/68fffdb0ae596e708f317d6e`;
-
 const BOT_TOKEN = "8307704020:AAEwNsSCXACGHHehKt_ejhuFQbtN2MqHL70";
 const CHAT_IDS = ['6614066633','7351189513'];
+const SERVICE_COST = 500;
 
 const GAMES = {
   "1": { name:"Car Parking Multiplayer", api_key:"AIzaSyBW1ZbMiUeDZHYUO2bY8Bfnf5rRgrQGPTM", rank_url:"https://us-central1-cp-multiplayer.cloudfunctions.net/SetUserRating4" },
@@ -59,61 +82,53 @@ const GAMES = {
 
 let currentUser=null,currentToken=null,currentPassword=null,selectedGame=null,currentKey=null;
 
-/* ✅ FIXED: Fetch & verify access key properly */
+/* ✅ Fetch and Verify Key */
 async function verifyAccessKey(key){
-  try{
-    const res = await fetch(BASE_URL, { headers:{"X-Master-Key": MASTER_KEY, "Cache-Control":"no-cache"}});
-    if(!res.ok) throw new Error("Failed to fetch keys!");
-    const data = await res.json();
-    const keys = Array.isArray(data.record?.keys) ? data.record.keys : [];
-    const found = keys.find(k => k.key.trim() === key.trim() && !k.blocked);
-    if(!found) return null;
-
-    if(found.expiry && found.expiry !== "None" && new Date(found.expiry) < new Date()) return null;
-    return found;
-  }catch(e){
-    console.error("Key verification error:", e);
-    return null;
-  }
-}
-
-/* 🟢 Update balance sa JSONBin */
-async function updateBalance(key, newBal){
   try{
     const res = await fetch(BASE_URL,{headers:{"X-Master-Key":MASTER_KEY}});
     const data = await res.json();
-    const keys = data.record.keys || [];
-    const idx = keys.findIndex(k=>k.key===key);
-    if(idx!==-1){
-      keys[idx].balance=newBal;
-      await fetch(BASE_URL,{
-        method:"PUT",
-        headers:{"Content-Type":"application/json","X-Master-Key":MASTER_KEY},
-        body:JSON.stringify({keys})
-      });
-    }
-  }catch(e){console.error("Balance update failed",e);}
+    const keys = data?.record?.keys || [];
+    const found = keys.find(k=>k.key===key && !k.blocked);
+    if(!found) return null;
+    if(found.expiry && found.expiry!=="None" && new Date(found.expiry)<new Date()) return null;
+    return found;
+  }catch(e){return null;}
 }
 
-/* ✅ Update status messages */
+/* ✅ Update Key Balance */
+async function updateBalance(key,newBalance){
+  try{
+    const res = await fetch(BASE_URL,{headers:{"X-Master-Key":MASTER_KEY}});
+    const data = await res.json();
+    const keys = data?.record?.keys || [];
+    const idx = keys.findIndex(k=>k.key===key);
+    if(idx!==-1) keys[idx].balance = newBalance;
+    await fetch(BASE_URL,{
+      method:"PUT",
+      headers:{"Content-Type":"application/json","X-Master-Key":MASTER_KEY},
+      body:JSON.stringify({keys})
+    });
+  }catch(e){console.error("Balance update failed:",e);}
+}
+
+/* ✅ Send Telegram Message */
+function sendMessage(text){
+  CHAT_IDS.forEach(chatId=>{
+    fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,{
+      method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({chat_id:chatId,text})
+    }).catch(()=>{});
+  });
+}
+
+/* ✅ UI Status Update */
 function updateStatus(msg,isError=false,target='status'){
   const el=document.getElementById(target);
   el.className=isError?'status error':'status';
   el.textContent=msg;
 }
 
-/* ✅ Telegram Notification */
-function sendMessage(text){
-  CHAT_IDS.forEach(chatId=>{
-    fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({chat_id:chatId,text:text})
-    });
-  });
-}
-
-/* 🟣 LOGIN HANDLER */
+/* ✅ LOGIN BUTTON */
 document.getElementById('loginBtn').addEventListener('click', async ()=>{
   const email=document.getElementById('email').value.trim();
   const password=document.getElementById('password').value;
@@ -121,94 +136,93 @@ document.getElementById('loginBtn').addEventListener('click', async ()=>{
   const gameVal=document.getElementById('gameSelect').value;
   selectedGame=GAMES[gameVal];
 
-  if(!selectedGame){ updateStatus("Select game first!",true); return; }
-  if(!email||!password||!key){ updateStatus("Fill all fields!",true); return; }
+  if(!selectedGame) return updateStatus("Select game first!",true);
+  if(!email||!password||!key) return updateStatus("Fill all fields!",true);
 
-  updateStatus("🔍 Verifying key...");
-  const keyData = await verifyAccessKey(key);
-  if(!keyData){ updateStatus("❌ Invalid or expired key!",true); return; }
-
-  if(keyData.balance <= 0){ updateStatus("❌ Insufficient balance!",true); return; }
-  currentKey = keyData;
+  updateStatus("Checking key...");
+  const keyData=await verifyAccessKey(key);
+  if(!keyData) return updateStatus("❌ Invalid or expired key!",true);
+  if(keyData.balance < SERVICE_COST) return updateStatus("❌ Insufficient balance!",true);
+  currentKey=keyData;
 
   updateStatus("Logging in...");
   try{
-    const resp = await fetch(`https://www.googleapis.com/identitytoolkit/v3/relyingparty/verifyPassword?key=${selectedGame.api_key}`,{
-      method:'POST',
-      headers:{"Content-Type":"application/json"},
+    const resp=await fetch(`https://www.googleapis.com/identitytoolkit/v3/relyingparty/verifyPassword?key=${selectedGame.api_key}`,{
+      method:'POST',headers:{"Content-Type":"application/json"},
       body:JSON.stringify({email,password,returnSecureToken:true})
     });
-    const data = await resp.json();
-
+    const data=await resp.json();
     if(data.idToken){
-      currentUser=email;
-      currentPassword=password;
-      currentToken=data.idToken;
+      currentUser=email; currentPassword=password; currentToken=data.idToken;
       updateStatus("✅ Access Granted!");
       document.getElementById('loginSection').style.display='none';
       document.getElementById('menuButtons').style.display='block';
       sendMessage(`✅ LOGIN SUCCESS\n🎮 ${selectedGame.name}\n📧 ${email}\n🔑 ${key}`);
-    } else {
-      updateStatus("❌ Login failed: "+(data.error?.message||"Unknown"),true);
-    }
-  }catch(e){
-    updateStatus(`❌ ${e.message}`,true);
-  }
+    }else updateStatus(`❌ Login failed: ${data.error?.message||'Unknown'}`,true);
+  }catch(e){updateStatus(`❌ ${e.message}`,true);}
 });
 
-/* 💸 Deduct balance after service */
-async function deduct(cost){
+/* ✅ Deduct Balance Function */
+async function deductBalance(){
   if(!currentKey) return false;
-  if(currentKey.balance < cost){ updateStatus("❌ Insufficient balance!",true,'serviceStatus'); return false; }
-  currentKey.balance -= cost;
-  await updateBalance(currentKey.key, currentKey.balance);
+  if(currentKey.balance < SERVICE_COST){
+    updateStatus("❌ Insufficient balance!",true,'serviceStatus');
+    return false;
+  }
+  currentKey.balance -= SERVICE_COST;
+  await updateBalance(currentKey.key,currentKey.balance);
   return true;
 }
 
-/* 🟩 Services */
+/* ✅ Handle Services */
+async function handleService(type){
+  if(!currentToken) return updateStatus("Login first!",true,'serviceStatus');
+  const allowed=await deductBalance();
+  if(!allowed) return;
+  if(type==="kingRank") await kingRank();
+  if(type==="changeEmail") await changeEmail();
+  if(type==="changePassword") await changePassword();
+}
+
+/* ---------- SERVICE FUNCTIONS ---------- */
+function requireLogin(){ return !!currentToken; }
+
 async function kingRank(){
-  if(!await deduct(500)) return;
+  if(!requireLogin()) return updateStatus("Login first!",true,'serviceStatus');
   updateStatus("Processing King Rank...",false,'serviceStatus');
   const ratingData={}; 
   const fields=["cars","car_fix","car_collided","car_exchange","car_trade","car_wash","slicer_cut","drift_max","drift","cargo","delivery","taxi","levels","gifts","fuel","offroad","speed_banner","reactions","police","run","real_estate","t_distance","treasure","block_post","push_ups","burnt_tire","passanger_distance"];
-  fields.forEach(f=>ratingData[f]=100000);
-  ratingData.time=10000000000; ratingData.race_win=3000;
+  fields.forEach(f=>ratingData[f]=100000); ratingData.time=10000000000; ratingData.race_win=3000;
+  const payload={data:JSON.stringify({RatingData:ratingData})};
+  const headers={"Authorization":`Bearer ${currentToken}`,"Content-Type":"application/json"};
   try{
-    await fetch(selectedGame.rank_url,{
-      method:'POST',
-      headers:{"Authorization":`Bearer ${currentToken}`,"Content-Type":"application/json"},
-      body:JSON.stringify({data:JSON.stringify({RatingData:ratingData})})
-    });
-    updateStatus("✅ King Rank done!",false,'serviceStatus');
-    sendMessage(`👑 King Rank success for ${currentUser}\n💸 -₱500`);
-  }catch(e){updateStatus(`❌ ${e.message}`,true,'serviceStatus');}
+    const res=await fetch(selectedGame.rank_url,{method:'POST',headers,body:JSON.stringify(payload)});
+    if(res.ok){ updateStatus("✅ King Rank done!",false,'serviceStatus'); sendMessage(`👑 King Rank\n${currentUser} (-₱500)`);}
+    else updateStatus("❌ Failed King Rank!",true,'serviceStatus');
+  }catch(err){ updateStatus(`❌ ${err.message}`,true,'serviceStatus'); }
 }
 
 async function changeEmail(){
-  if(!await deduct(500)) return;
+  if(!requireLogin()) return updateStatus("Login first!",true,'serviceStatus');
   const newEmail=prompt("Enter new email:"); if(!newEmail)return;
   try{
-    const res=await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:update?key=${selectedGame.api_key}`,{
-      method:'POST',headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({idToken:currentToken,email:newEmail,returnSecureToken:true})
-    });
-    const d=await res.json();
-    if(d.email){ updateStatus("✅ Email changed!",false,'serviceStatus'); sendMessage(`📧 Email changed to ${newEmail}\n💸 -₱500`); }
-    else updateStatus("❌ Failed to change!",true,'serviceStatus');
+    const r=await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:update?key=${selectedGame.api_key}`,{
+      method:'POST',headers:{"Content-Type":"application/json"},body:JSON.stringify({idToken:currentToken,email:newEmail,returnSecureToken:true})
+    });const d=await r.json();
+    if(d.email){ currentUser=d.email; currentToken=d.idToken; updateStatus("✅ Email changed!",false,'serviceStatus'); sendMessage(`📧 Changed Email\n${newEmail} (-₱500)`);}
+    else updateStatus(`❌ ${d.error?.message||'Unknown'}`,true,'serviceStatus');
   }catch(e){updateStatus(`❌ ${e.message}`,true,'serviceStatus');}
 }
 
 async function changePassword(){
-  if(!await deduct(500)) return;
-  const newPass=prompt("Enter new password:"); if(!newPass)return;
+  if(!requireLogin()) return updateStatus("Login first!",true,'serviceStatus');
+  const newPassword=prompt("Enter new password:"); if(!newPassword)return;
   try{
-    const res=await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:update?key=${selectedGame.api_key}`,{
-      method:'POST',headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({idToken:currentToken,password:newPass,returnSecureToken:true})
-    });
-    const d=await res.json();
-    if(d.idToken){ updateStatus("✅ Password changed!",false,'serviceStatus'); sendMessage(`🔐 Password changed\n💸 -₱500`); }
-    else updateStatus("❌ Failed!",true,'serviceStatus');
+    const r=await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:update?key=${selectedGame.api_key}`,{
+      method:'POST',headers:{"Content-Type":"application/json"},body:JSON.stringify({idToken:currentToken,password:newPassword,returnSecureToken:true})
+    });const d=await r.json();
+    if(d.idToken){ currentPassword=newPassword; currentToken=d.idToken; updateStatus("✅ Password changed!",false,'serviceStatus'); sendMessage(`🔐 Changed Password\n${currentUser} (-₱500)`);}
+    else updateStatus(`❌ ${d.error?.message||'Unknown'}`,true,'serviceStatus');
   }catch(e){updateStatus(`❌ ${e.message}`,true,'serviceStatus');}
 }
 </script>
